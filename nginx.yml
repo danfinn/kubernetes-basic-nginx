@@ -1,3 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-svc
+spec:
+  selector:
+    app: nginx
+  ports:
+   - port: 80
+     targetPort: 80
+  type: LoadBalancer
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,15 +29,21 @@ spec:
         image: nginx:1.14.2
         ports:
         - containerPort: 80
-
-apiVersion: v1
-kind: Service
-metadata:
-  name: nginx-svc
-spec:
-  selector:
-    app: nginx
-  ports:
-   - port: 80
-     targetPort: 80
-  type: LoadBalancer
+        volumeMounts:
+        - name: secret
+          mountPath: /secure
+          readOnly: true
+        - name: config
+          mountPath: "/etc/nginx/config.conf"
+          subPath: config.conf
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/sh", "-c", "cp /secure/ssl_cert /etc/nginx/ssl.crt"]
+      volumes:
+        - name: secret
+          secret:
+            secretName: ssl-cert 
+        - name: config
+          configMap:
+            name: conf
